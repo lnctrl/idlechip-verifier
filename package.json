@@ -1,0 +1,47 @@
+{
+  "name": "idlechip-agent",
+  "version": "0.1.2",
+  "description": "IdleChip desktop helper — scan local GPUs and sync stats to the marketplace",
+  "license": "MIT",
+  "author": "lnctrl",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lnctrl/idlechip-agent.git"
+  },
+  "homepage": "https://github.com/lnctrl/idlechip-agent#readme",
+  "bugs": {
+    "url": "https://github.com/lnctrl/idlechip-agent/issues"
+  },
+  "keywords": [
+    "idlechip",
+    "gpu",
+    "nvidia",
+    "marketplace",
+    "cli"
+  ],
+  "bin": {
+    "idlechip-agent": "./dist/cli.js"
+  },
+  "files": [
+    "dist/cli.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:exe": "node scripts/build.mjs --exe",
+    "prepublishOnly": "npm run build",
+    "pack:check": "npm pack --dry-run"
+  },
+  "optionalDependencies": {
+    "koffi": "^3.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "esbuild": "^0.25.5",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

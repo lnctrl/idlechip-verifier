@@ -1,0 +1,47 @@
+import { loadLocalGpuConfig } from "./local-config.js";
+import { saveCredentials, type AgentCredentials } from "./credentials.js";
+import { assertAllowedApiUrl } from "./site-allowlist.js";
+
+export async function pairWithCode(apiUrlRaw: string, code: string): Promise<AgentCredentials> {
+  const apiUrl = assertAllowedApiUrl(apiUrlRaw);
+  const config = loadLocalGpuConfig();
+  const res = await fetch(`${apiUrl}/api/my-gpus/pair/redeem`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      code,
+      apiUrl,
+      hostId: config.hostId,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error ?? `Pairing failed (${res.status})`);
+  }
+  const creds: AgentCredentials = {
+    token: data.token,
+    ownerName: data.ownerName,
+    apiUrl: data.apiUrl ?? apiUrl,
+    pairedAt: new Date().toISOString(),
+  };
+  saveCredentials(creds);
+  return creds;
+}
+
+export async function syncHostConfigToApi(creds: AgentCredentials) {
+  const { loadLocalGpuConfig } = await import("./local-config.js");
+  const config = loadLocalGpuConfig();
+  config.ownerName = creds.ownerName;
+  const res = await fetch(`${creds.apiUrl.replace(/\/$/, "")}/api/my-gpus/sync`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${creds.token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(config),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Sync failed (${res.status}): ${text}`);
+  }
+}
