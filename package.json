@@ -20,7 +20,7 @@
     "cli"
   ],
   "bin": {
-    "idlechip-verifier": "./dist/cli.js"
+    "idlechip-verifier": "dist/cli.js"
   },
   "files": [
     "dist/cli.js",
