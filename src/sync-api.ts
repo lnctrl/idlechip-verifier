@@ -1,3 +1,4 @@
+import { attestationEnrollmentFromKey, ensureAttestationKey } from "./attestation-sign.js";
 import { loadLocalGpuConfig } from "./local-config.js";
 import { saveCredentials, type ScannerCredentials } from "./credentials.js";
 import { assertAllowedApiUrl } from "./site-allowlist.js";
@@ -5,6 +6,7 @@ import { assertAllowedApiUrl } from "./site-allowlist.js";
 export async function pairWithCode(apiUrlRaw: string, code: string): Promise<ScannerCredentials> {
   const apiUrl = assertAllowedApiUrl(apiUrlRaw);
   const config = loadLocalGpuConfig();
+  const enrollment = attestationEnrollmentFromKey(ensureAttestationKey());
   const res = await fetch(`${apiUrl}/api/my-gpus/pair/redeem`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -12,6 +14,7 @@ export async function pairWithCode(apiUrlRaw: string, code: string): Promise<Sca
       code,
       apiUrl,
       hostId: config.hostId,
+      ...enrollment,
     }),
   });
   const data = await res.json().catch(() => ({}));

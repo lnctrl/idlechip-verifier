@@ -30,6 +30,7 @@ Credentials save to `%USERPROFILE%\.idlechip\verifier-credentials.json`.
 - Sync/register/heartbeat require a **Bearer token** from pairing
 - Pairing codes expire in **10 minutes** and are single-use
 - Token binds to your PC's `hostId` on first sync
+- **v1.1+:** pairing registers an **Ed25519 attestation key** on this PC (`%USERPROFILE%\.idlechip\attestation-key.json`). Session `watch --session` signs utilization proofs the marketplace verifies before crediting hours.
 
 ## Windows .exe
 

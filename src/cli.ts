@@ -7,6 +7,10 @@ import { authHeaders, loadCredentials, requireCredentials } from "./credentials.
 import { pairWithCode, syncHostConfigToApi } from "./sync-api.js";
 import { assertAllowedApiUrl, DEFAULT_API_URL } from "./site-allowlist.js";
 import {
+  buildSessionAttestationPayload,
+  signAttestationForSubmit,
+} from "./attestation-sign.js";
+import {
   applyStableHostId,
   filterGpusByKey,
   loadLocalGpuConfig,
@@ -194,6 +198,13 @@ async function cmdWatch() {
             body: JSON.stringify({
               gpuId: gpuIds[0],
               utilizationPct: gpus[0]?.utilizationPct ?? null,
+              signed: signAttestationForSubmit(
+                buildSessionAttestationPayload({
+                  sessionId,
+                  gpuId: gpuIds[0]!,
+                  utilizationPct: gpus[0]?.utilizationPct ?? null,
+                }),
+              ),
             }),
           })
         : await fetch(`${creds.apiUrl}/api/gpus/heartbeat`, {
@@ -203,10 +214,13 @@ async function cmdWatch() {
           });
 
       if (!res.ok) {
-        throw new Error(`Request failed (${res.status}): ${await res.text()}`);
+        const label = sessionId ? "Session attestation" : "Heartbeat";
+        throw new Error(`${label} failed (${res.status}): ${await res.text()}`);
       }
 
-      console.log(`[${new Date().toLocaleTimeString()}] Heartbeat + sync OK: ${summary}`);
+      console.log(
+        `[${new Date().toLocaleTimeString()}] ${sessionId ? "Session attestation" : "Heartbeat"} + sync OK: ${summary}`,
+      );
     } catch (err) {
       console.error(`[${new Date().toLocaleTimeString()}] Error:`, (err as Error).message);
     }
