@@ -31,20 +31,27 @@ export async function pairWithCode(apiUrlRaw: string, code: string): Promise<Sca
   return creds;
 }
 
-export async function syncHostConfigToApi(creds: ScannerCredentials) {
+export async function syncHostConfigToApi(
+  creds: ScannerCredentials,
+  options?: { sessionId?: string },
+) {
   const { loadLocalGpuConfig } = await import("./local-config.js");
   const config = loadLocalGpuConfig();
   config.ownerName = creds.ownerName;
-  const res = await fetch(`${creds.apiUrl.replace(/\/$/, "")}/api/my-gpus/sync`, {
+  const url = `${creds.apiUrl.replace(/\/$/, "")}/api/my-gpus/sync`;
+  const res = await fetch(url, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${creds.token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(config),
+    body: JSON.stringify({
+      ...config,
+      ...(options?.sessionId ? { sessionId: options.sessionId } : {}),
+    }),
   });
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`Sync failed (${res.status}): ${text}`);
+    throw new Error(`Sync failed (${res.status}) against ${url}: ${text}`);
   }
 }

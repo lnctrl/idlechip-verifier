@@ -3,7 +3,7 @@
 import { scanGpus, formatGpuSummary, formatVram } from "./scanner/index.js";
 import { BRAND_DISPLAY_NAME, BRAND_PACKAGE_NAME } from "./brand.js";
 import { gpuHistoryKey } from "./types.js";
-import { authHeaders, loadCredentials, requireCredentials } from "./credentials.js";
+import { authHeaders, applyApiUrlOverride, loadCredentials, requireCredentials } from "./credentials.js";
 import { pairWithCode, syncHostConfigToApi } from "./sync-api.js";
 import { assertAllowedApiUrl, DEFAULT_API_URL } from "./site-allowlist.js";
 import {
@@ -79,7 +79,8 @@ async function cmdPair() {
 }
 
 async function cmdScan() {
-  const creds = requireCredentials();
+  const { apiUrl: urlOverride } = parseArgs();
+  let creds = applyApiUrlOverride(requireCredentials(), urlOverride);
   assertAllowedApiUrl(creds.apiUrl);
 
   console.log("Scanning GPUs...\n");
@@ -107,8 +108,8 @@ async function cmdScan() {
 }
 
 async function cmdRegister() {
-  const creds = requireCredentials();
-  const { gpuKey: gpuKeyArg } = parseArgs();
+  const { gpuKey: gpuKeyArg, apiUrl: urlOverride } = parseArgs();
+  let creds = applyApiUrlOverride(requireCredentials(), urlOverride);
 
   const config = loadLocalGpuConfig();
   const allGpus = applyStableHostId(await scanGpus(), config.hostId);
@@ -146,8 +147,17 @@ async function cmdRegister() {
 }
 
 async function cmdWatch() {
-  const creds = requireCredentials();
-  const { gpuKey: gpuKeyArg, sessionId } = parseArgs();
+  const { code, gpuKey: gpuKeyArg, sessionId, apiUrl: urlOverride } = parseArgs();
+  if (!loadCredentials() && code?.trim()) {
+    await pairWithCode(urlOverride, code);
+  }
+  let creds = applyApiUrlOverride(requireCredentials(), urlOverride);
+  const savedUrl = loadCredentials()?.apiUrl;
+  if (savedUrl && savedUrl !== creds.apiUrl && urlOverride) {
+    console.warn(
+      `Using ${creds.apiUrl} for this run (saved pairing had ${savedUrl}).`,
+    );
+  }
 
   console.log(
     `Watching — scan + sync every ${SCAN_SYNC_INTERVAL_MS / 1000}s (${creds.apiUrl})${
@@ -174,7 +184,7 @@ async function cmdWatch() {
         .filter((id): id is string => !!id);
 
       const summary = gpus.map((gpu) => `${gpu.name} ${gpu.utilizationPct ?? "?"}%`).join(", ");
-      await syncHostConfigToApi(creds);
+      await syncHostConfigToApi(creds, sessionId ? { sessionId } : undefined);
 
       const heartbeatDue = Date.now() - lastHeartbeatAttempt >= HEARTBEAT_INTERVAL_MS;
       if (!heartbeatDue) {

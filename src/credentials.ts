@@ -35,6 +35,20 @@ export function saveCredentials(creds: ScannerCredentials) {
   writeFileSync(path, JSON.stringify(creds, null, 2));
 }
 
+/** CLI --url beats stale localhost saved from an earlier dev pairing. */
+export function applyApiUrlOverride(
+  creds: ScannerCredentials,
+  apiUrlOverride?: string,
+): ScannerCredentials {
+  const override = apiUrlOverride?.trim() || process.env.IDLECHIP_API_URL?.trim();
+  if (!override) return creds;
+  const apiUrl = override.replace(/\/$/, "");
+  if (creds.apiUrl === apiUrl) return creds;
+  const next = { ...creds, apiUrl };
+  saveCredentials(next);
+  return next;
+}
+
 export function clearCredentials() {
   const path = credentialsPath();
   if (existsSync(path)) writeFileSync(path, "{}");
